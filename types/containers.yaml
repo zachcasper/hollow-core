@@ -1,0 +1,25 @@
+name: Hollow.Core
+types:
+  containers:
+    apiVersions:
+      '2023-10-01-preview':
+        schema: 
+          type: object
+          properties:
+            environment:
+              type: string
+            application:
+              type: string
+            status:
+              type: object
+              properties:
+                binding:
+                  type: object
+                  properties:
+                    serviceName:
+                      type: string
+                      description: The hostname of the service.
+                    servicePort:
+                      type: string
+                      description: The port the service exposes.
+    capabilities: ["SupportsRecipes"]
