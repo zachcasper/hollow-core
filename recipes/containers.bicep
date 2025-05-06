@@ -6,31 +6,6 @@ extension kubernetes with {
   namespace: context.runtime.kubernetes.namespace
 } as kubernetes
 
-// Temporary object to hold input values since input parameters are not passed to UDT recipes
-// https://dev.azure.com/azure-octo/Incubations/_workitems/edit/10284
-var containerProperties = {
-  frontend: {
-    // Frontend container of TodoList application
-    image: 'ghcr.io/radius-project/samples/demo:latest'
-    ports: [
-      {
-        name: 'https'
-        containerPort: 3000
-      }
-    ]
-    envs: [
-      {
-        name: 'CONNECTION_REDIS_HOST'
-        value: 'cache.${context.runtime.kubernetes.namespace}.svc.cluster.local'
-      }
-      {
-        name: 'CONNECTION_REDIS_PORT'
-        value: '6379'
-      } 
-    ]
-  }
-}
-
 resource deployment 'apps/Deployment@v1' = {
   metadata: {
     name: '${context.resource.name}-deployment'
@@ -59,9 +34,26 @@ resource deployment 'apps/Deployment@v1' = {
         containers: [
           {
             name: context.resource.name
-            image: containerProperties.frontend.image
-            ports: containerProperties.frontend.ports
-            env: containerProperties.frontend.envs
+            image: context.resource.properties.container.image
+            // TODO: Convert to array
+            // TODO: Add handling null values for optional properties
+            // env: context.resource.properties.container.env
+            // TODO: Convert to array
+            // TODO: Add handling null values for optional properties
+            // command: context.resource.properties.container.command
+            // TODO: Convert to array
+            // TODO: Needs further testing for handling null values for optional properties
+            // args: empty(context.resource.properties.container.args) ? [] : context.resource.properties.container.args
+            workingDir: context.resource.properties.container.workingDir
+            // TODO: Convert to array
+            // TODO: Type enforcement does not seem to be working
+            // ports: context.resource.properties.container.ports
+            ports: [
+              {
+                containerPort: context.resource.properties.container.ports.http.containerPort
+                name: 'http'
+              }
+            ]
           }
         ]
       }
@@ -69,27 +61,27 @@ resource deployment 'apps/Deployment@v1' = {
   }
 }
 
-resource service 'core/Service@v1' = {
-  metadata: {
-    name: context.resource.name
-    labels: {
-      app: context.application.name
-      resource: context.resource.name
-    }
-  }
-  spec: {
-    type: 'ClusterIP'
-    selector: {
-      app: context.application.name
-      resource: context.resource.name
-    }
-    ports: [
-      {
-        port: containerProperties.frontend.ports[0].containerPort
-      }
-    ]
-  }
-}
+// resource service 'core/Service@v1' = {
+//   metadata: {
+//     name: context.resource.name
+//     labels: {
+//       app: context.application.name
+//       resource: context.resource.name
+//     }
+//   }
+//   spec: {
+//     type: 'ClusterIP'
+//     selector: {
+//       app: context.application.name
+//       resource: context.resource.name
+//     }
+//     ports: [
+//       {
+//         port: context.resource.properties.ports[0].containerPort
+//       }
+//     ]
+//   }
+// }
 
 output result object = {
   resources: [
@@ -97,8 +89,7 @@ output result object = {
     '/planes/kubernetes/local/namespaces/${deployment.metadata.namespace}/providers/apps/Deployment/${deployment.metadata.name}'
   ]
   values: {
-    // serviceName: '${service.metadata.name}.${service.metadata.namespace}.svc.cluster.local'
     serviceName: context.resource.name
-    servicePort: containerProperties.frontend.ports[0].containerPort
+    servicePort: context.resource.properties.ports[0].containerPort
   }
 }
